@@ -3,135 +3,161 @@ do
    -- obsolete and incomplete protocol reference:
    -- http://wiki.slimdevices.com/index.php/SlimProto_TCP_protocol
 
-   local p_slim_sc = Proto("slim_sc", "SLIM-SC")
-   local p_slim_ss = Proto("slim_ss", "SLIM-SS")
-
    local p_slim_s = Proto("slim_s", "SLIM-S")
+   local f = {}
+
+   f.req = {
+      code = ProtoField.string("slim_s.request.code", "Request Code"),
+      len  = ProtoField.uint32("slim_s.request.length", "Length", base.DEC),
+      data = ProtoField.bytes("slim_s.request.data", "Data", base.HEX)
+   }
+
+   f.req.helo = {
+      device_id = ProtoField.int8("slim_s.request.helo.device_id", "DeviceID", base.DEC),
+      revision  = ProtoField.int8("slim_sc.request.helo.revision", "Revision", base.DEC),
+      mac       = ProtoField.ether("slim_sc.request.helo.mac", "MAC"),
+   }
+
+   local function req_helo_dissector(buf, pkt, t)
+      local f = f.req.helo
+      t:add(f.device_id, buf(0, 1))
+      t:add(f.revision, buf(1, 1))
+      t:add(f.mac, buf(2, 6))
+   end
+
+   f.req.stat = {
+      event_code = ProtoField.string("slim_s.request.stat.event_code", "EventCode")
+   }
+
+   local function req_stat_dissector(buf, pkt, t)
+      local f = f.req.stat
+      t:add(f.event_code, buf(0, 4))
+   end
+
+   local req_dissector = { ["HELO"] = req_helo_dissector,
+                           ["STAT"] = req_stat_dissector }
+   
+   local function client_pdu_dissector(buf, pkt, root)
+      pkt.cols.protocol = p_slim_s.name
+      local t = root:add(p_slim_s, buf())
+      local f = f.req
+      t:add(f.code,  buf(0, 4))
+      t:add(f.len,  buf(4, 4))
+      
+      local code = buf(0, 4):string()
+      local dissector = req_dissector[code]
+      if dissector then
+         dissector(buf(8), pkt, t)
+      else
+         t:add(f.data, buf(8))
+      end
+   end
+
+   function client_dissector(buf, pkt, root)
+      local offset = 0
+      while true do
+         local buf_len = buf:len() - offset
+         if buf_len < 8 then
+            if buf_len > 0 then
+               pkt.desegment_len = DESEGMENT_ONE_MORE_SEGMENT
+               pkt.desegment_offset = offset
+            end
+            return
+         end
+            
+         local pdu_len = buf(4 + offset, 4):uint() + 8
+         if buf_len < pdu_len then
+            pkt.desegment_len = pdu_len - buf_len
+            pkt.desegment_offset = offset
+            return
+         end
+         
+         client_pdu_dissector(buf(offset, pdu_len), pkt, root)
+         offset = offset + pdu_len
+      end
+   end
+
+   f.res = {
+      len  = ProtoField.uint16("slim_s.response.length", "Length", base.DEC),
+      code = ProtoField.string("slim_s.response.code", "Response Code"),
+      data = ProtoField.bytes("slim_s.response.data", "Data", base.HEX),
+   }
+
+   local function server_pdu_dissector(buf, pkt, root)
+      pkt.cols.protocol = p_slim_s.name
+      local t = root:add(p_slim_s, buf())
+      local f = f.res
+      t:add(f.len, buf(0, 2))
+      t:add(f.code, buf(2, 4))
+      t:add(f.data, buf(6))
+   end
+
+   local function server_dissector(buf, pkt, root)
+      local offset = 0
+      while true do
+         local buf_len = buf:len() - offset
+         if buf_len < 2 then
+            if buf_len == 0 then return end
+            pkt.desegment_len = DESEGMENT_ONE_MORE_SEGMENT
+            pkt.desegment_offset = offset
+            return
+         end
+         
+         local pdu_len = buf(offset, 2):uint() + 2
+         if buf_len < pdu_len then
+            pkt.desegment_len = pdu_len - buf_len
+            pkt.desegment_offset = offset
+            return
+         end
+            
+         server_pdu_dissector(buf(offset, pdu_len), pkt, root)
+         offset = offset + pdu_len
+      end
+   end
+
+   local slim_s_port = 3483
 
    function p_slim_s.dissector(buf, pkt, t)
-      if pkt.dst_port == 3484 then
-         return p_slim_sc.dissector(buf, pkt, t)
+      if pkt.dst_port == slim_s_port then
+         return client_dissector(buf, pkt, t)
       else
-         return p_slim_ss.dissector(buf, pkt, t)
+         return server_dissector(buf, pkt, t)
       end
    end
+
+   
+   local function search_fields(f, q)
+      q = q or {}
+      if type(f) == "table" then
+         for _, v in pairs(f) do
+            search_fields(v, q)
+         end
+      else
+         q[#q + 1] = f
+      end
+      return q
+   end
+
+   local function print_fields(n, f)
+      if type(f) == "table" then
+         print("looking for fields in " .. n .. "\n")
+         for k, v in pairs(f) do
+            print_fields(k, v)
+         end
+      else
+         print(" => " .. n .. " is a ProtoField\n")
+      end
+   end
+
+   print_fields("root", f)
+
+   p_slim_s.fields = search_fields(f)
+
+   print("fields found: " .. #(p_slim_s.fields) .. "\n")
 
    local tcp_encap_table = DissectorTable.get("tcp.port")
-   tcp_encap_table:add(3484, p_slim_s)
+   tcp_encap_table:add(slim_s_port, p_slim_s)
 
-   do 
-      local f_helo_device_id = ProtoField.int8("slim_sc.helo.device_id", "DeviceID", base.DEC)
-      local f_helo_revision  = ProtoField.int8("slim_sc.helo.revision", "Revision", base.DEC)
-      local f_helo_mac       = ProtoField.ether("slim_sc.helo.mac", "MAC")
 
-      local function helo_dissector(buf, pkt, t)
-         t:add(f_helo_device_id, buf(0, 1))
-         t:add(f_helo_revision, buf(1, 1))
-         t:add(f_helo_mac, buf(2, 6))
-      end
 
-      local f_stat_event_code = ProtoField.stringz("slim_sc.stat.event_code", "EventCode")
-
-      local function stat_dissector(buf, pkt, t)
-         t:add(f_stat_event_code, buf(0, 4))
-      end
-
-      local cmd_dissector = { ["HELO"] = helo_dissector,
-                              ["STAT"] = stat_dissector }
-
-      local f_cmd  = ProtoField.stringz("slim_sc.command", "Command")
-      local f_len  = ProtoField.uint32("slim_sc.length", "Length", base.DEC)
-      local f_data = ProtoField.bytes("slim_sc.data", "Data", base.HEX)
-
-      p_slim_sc.fields = { f_helo_device_id, f_helo_revision, f_helo_mac,
-                           f_stat_event_code,
-                           f_cmd, f_len, f_data }
-
-      local function pdu_slim_sc_dissector(buf, pkt, root)
-         pkt.cols.protocol = p_slim_sc.name
-         local data_len = buf(4, 4):uint()
-         local t = root:add(p_slim_sc, buf())
-         t:add(f_cmd,  buf(0, 4))
-         t:add(f_len,  buf(4, 4))
-
-         local cmd = buf(0, 4):stringz()
-         local cd = cmd_dissector[cmd]
-         if cd then
-            cd(buf(8, data_len), pkt, t)
-         else
-            t:add(f_data, buf(8, data_len))
-         end
-      end
-
-      function p_slim_sc.dissector(buf, pkt, root)
-         print("dissecting SLIM-SC\n")
-         local offset = 0
-         while true do
-            local buf_len = buf:len() - offset
-            -- print("dissecting offset: " .. offset .. ", buf_len: " ..buf_len .. "\n")
-            if buf_len < 8 then
-               if buf_len == 0 then return end
-               pkt.desegment_len = DESEGMENT_ONE_MORE_SEGMENT
-               -- print("requesting one more segment: " .. DESEGMENT_ONE_MORE_SEGMENT .. "\n")
-               pkt.desegment_offset = offset
-               return
-            end
-            
-            local pdu_len = buf(4 + offset, 4):uint() + 8
-            if buf_len < pdu_len then
-               pkt.desegment_len = pdu_len - buf_len
-               pkt.desegment_offset = offset
-               return
-            end
-            
-            pdu_slim_sc_dissector(buf(offset, pdu_len), pkt, root)
-            offset = offset + pdu_len
-         end
-      end
-
-      local tcp_encap_table = DissectorTable.get("tcp.port")
-      tcp_encap_table:add(3483, p_slim_sc)
-   end
-
-   do
-
-      local f_len = ProtoField.uint16("slim_ss.length", "Length", base.DEC)
-      local f_cmd = ProtoField.string("slim_ss.command", "Command")
-      local f_data = ProtoField.bytes("slim_ss.data", "Data", base.HEX)
-
-      p_slim_ss.fields = { f_len, f_cmd, f_data }
-
-      local function pdu_slim_ss_dissector(buf, pkt, root)
-         pkt.cols.protocol = p_slim_ss.name
-         local data_len = buf(0, 2):uint()
-         local t = root:add(p_slim_ss, buf())
-         t:add(f_len, buf(0, 2))
-         t:add(f_cmd, buf(2, 4))
-      end
-
-      function p_slim_ss.dissector(buf, pkt, root)
-         print("dissecting SLIM-SS\n")
-         local offset = 0
-         while true do
-            local buf_len = buf:len() - offset
-            if buf_len < 2 then
-               if buf_len == 0 then return end
-               pkt.desegment_len = DESEGMENT_ONE_MORE_SEGMENT
-               pkt.desegment_offset = offset
-               return
-            end
-
-            local pdu_len = buf(offset, 2):uint() + 6
-            if buf_len < pdu_len then
-               pkt.desegment_len = pdu_len - buf_len
-               pkt.desegment_offset = offset
-               return
-            end
-            
-            pdu_slim_ss_dissector(buf(offset, pdu_len), pkt, root)
-            offset = offset + pdu_len
-         end
-      end
-
-   end
 end
