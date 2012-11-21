@@ -650,6 +650,6 @@ do
    local tcp_encap_table = DissectorTable.get("tcp.port")
    tcp_encap_table:add(slim_s_port, p_slim_s)
 
-
+   tcp_encap_table:add(9000, tcp_encap_table:get_dissector(80))
 
 end
