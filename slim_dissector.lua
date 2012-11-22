@@ -3,157 +3,157 @@ do
    -- obsolete and incomplete protocol reference:
    -- http://wiki.slimdevices.com/index.php/SlimProto_TCP_protocol
 
-   local p_slim_s = Proto("slim_s", "SLIM-S")
+   local p_slim = Proto("slim", "SLIM")
    local dissector = { client = {}, server = {} }
 
    local fields = {
       client = {
-         code = ProtoField.string("slim_s.client.code", "Client Code"),
-         len  = ProtoField.uint32("slim_s.client.length", "Length", base.DEC),
-         data = ProtoField.bytes("slim_s.client.data", "Data", base.HEX),
+         code = ProtoField.string("slim.client.code", "Client Code"),
+         len  = ProtoField.uint32("slim.client.length", "Length", base.DEC),
+         data = ProtoField.bytes("slim.client.data", "Data", base.HEX),
 
          helo = {
-            device_id        = ProtoField.uint8("slim_s.client.helo.device_id", "DeviceID", base.DEC),
-            revision         = ProtoField.uint8("slim_s.client.helo.revision", "Revision", base.DEC),
-            mac              = ProtoField.ether("slim_s.client.helo.mac", "MAC"),
-            uuid             = ProtoField.bytes("slim_s.client.helo.uuid", "UUID", base.HEX),
-            wlan_channellist = ProtoField.uint16("slim_s.client.helo.wlan_channellist",
+            device_id        = ProtoField.uint8("slim.client.helo.device_id", "DeviceID", base.DEC),
+            revision         = ProtoField.uint8("slim.client.helo.revision", "Revision", base.DEC),
+            mac              = ProtoField.ether("slim.client.helo.mac", "MAC"),
+            uuid             = ProtoField.bytes("slim.client.helo.uuid", "UUID", base.HEX),
+            wlan_channellist = ProtoField.uint16("slim.client.helo.wlan_channellist",
                                                  "WLAN channel list", base.HEX),
-            bytes_received   = ProtoField.uint64("slim_s.client.helo.bytes_received",
+            bytes_received   = ProtoField.uint64("slim.client.helo.bytes_received",
                                                  "Bytes received", base.DEC),
-            lang             = ProtoField.string("slim_s.client.helo.lang", "Language"),
-            capabilities     = ProtoField.string("slim_s.client.helo.capabilities", "Capabilities"),
+            lang             = ProtoField.string("slim.client.helo.lang", "Language"),
+            capabilities     = ProtoField.string("slim.client.helo.capabilities", "Capabilities"),
       },
 
          prxy = {
-            ip = ProtoField.ipv4("slim_s.client.prxy.ipv4", "IPv4"),
-            port = ProtoField.uint16("slim_s.client.prxy.port", "Port"),
+            ip = ProtoField.ipv4("slim.client.prxy.ipv4", "IPv4"),
+            port = ProtoField.uint16("slim.client.prxy.port", "Port"),
          },
 
          anic = {
-            flags = ProtoField.uint8("slim_s.client.anic.flags", "Flags", base.HEX),
+            flags = ProtoField.uint8("slim.client.anic.flags", "Flags", base.HEX),
          },
 
          body = {
-            data = ProtoField.string("slim_s.client.body.data", "HTTP body data"),
+            data = ProtoField.string("slim.client.body.data", "HTTP body data"),
          },
 
          butn = {
-            time = ProtoField.uint32("slim_s.client.butn.time", "Time", base.DEC),
-            code = ProtoField.uint32("slim_s.client.butn.code", "Button code", base.HEX),
+            time = ProtoField.uint32("slim.client.butn.time", "Time", base.DEC),
+            code = ProtoField.uint32("slim.client.butn.code", "Button code", base.HEX),
          },
 
          bye = {
-            code = ProtoField.uint8("slim_s.client.bye.code", "Bye code", base.DEC),
+            code = ProtoField.uint8("slim.client.bye.code", "Bye code", base.DEC),
          },
 
          dbug = {
-            data = ProtoField.string("slim_s.client.dbug.data", "Debug data"),
+            data = ProtoField.string("slim.client.dbug.data", "Debug data"),
          },
 
          ir = {
-            time    = ProtoField.uint32("slim_s.client.ir.time", "Time since startup (1KHz)", base.DEC),
-            format  = ProtoField.uint8("slim_s.client.ir.format", "Format", base.DEC),
-            no_bits = ProtoField.uint8("slim_s.client.ir.no_bits", "No bits", base.DEC),
-            code    = ProtoField.uint32("slim_s.client.ir.code", "IR code", base.HEX),
+            time    = ProtoField.uint32("slim.client.ir.time", "Time since startup (1KHz)", base.DEC),
+            format  = ProtoField.uint8("slim.client.ir.format", "Format", base.DEC),
+            no_bits = ProtoField.uint8("slim.client.ir.no_bits", "No bits", base.DEC),
+            code    = ProtoField.uint32("slim.client.ir.code", "IR code", base.HEX),
          },
 
          knob = {
-            time     = ProtoField.uint32("slim_s.client.knob.time", "Time", base.DEC),
-            position = ProtoField.uint32("slim_s.client.knob.position", "Position", base.HEX),
-            sync     = ProtoField.uint8("slim_s.client.knob.sync", "Sync", base.DEC),
+            time     = ProtoField.uint32("slim.client.knob.time", "Time", base.DEC),
+            position = ProtoField.uint32("slim.client.knob.position", "Position", base.HEX),
+            sync     = ProtoField.uint8("slim.client.knob.sync", "Sync", base.DEC),
          },
 
          meta = {
-            data = ProtoField.string("slim_s.client.meta.data", "Metadata"),
+            data = ProtoField.string("slim.client.meta.data", "Metadata"),
          },
 
          rawi = {
-            data = ProtoField.string("slim_s.client.rawi.data", "Raw data"),
+            data = ProtoField.string("slim.client.rawi.data", "Raw data"),
          },
 
          resp = {
-            data = ProtoField.string("slim_s.client.resp.data", "HTTP response data"),
+            data = ProtoField.string("slim.client.resp.data", "HTTP response data"),
          },
 
          setd = {
-            id                      = ProtoField.uint8("slim_s.client.setd.id", "Pref Id", base.DEC),
+            id                      = ProtoField.uint8("slim.client.setd.id", "Pref Id", base.DEC),
             playername              = ProtoField.string("sli_s.client.setd.playername", "Player name"),
-            digital_output_encoding = ProtoField.uint8("slim_s.client.setd.digital_output_encoding",
+            digital_output_encoding = ProtoField.uint8("slim.client.setd.digital_output_encoding",
                                                        "Digital Output Encoding", base.DEC),
-            world_clock_output      = ProtoField.uint8("slim_s.client.setd.world_clock_output",
+            world_clock_output      = ProtoField.uint8("slim.client.setd.world_clock_output",
                                                        "World clock output", base.DEC),
-            power_off_dac           = ProtoField.uint8("slim_s.client.setd.power_off_dac",
+            power_off_dac           = ProtoField.uint8("slim.client.setd.power_off_dac",
                                                        "Power off dac", base.DEC),
-            disable_dac             = ProtoField.uint8("slim_s.client.setd.disable_dac",
+            disable_dac             = ProtoField.uint8("slim.client.setd.disable_dac",
                                                        "Disable dac", base.DEC),
-            fxloop_source           = ProtoField.uint8("slim_s.client.setd.fxloop_source",
+            fxloop_source           = ProtoField.uint8("slim.client.setd.fxloop_source",
                                                        "Fxloop source", base.DEC),
-            fxloop_clock            = ProtoField.uint8("slim_s.client.setd.fxloop_clock",
+            fxloop_clock            = ProtoField.uint8("slim.client.setd.fxloop_clock",
                                                        "Fxloop clock", base.DEC),
-            unknown_pref            = ProtoField.bytes("slim_s.client.setd.unknown_pref",
+            unknown_pref            = ProtoField.bytes("slim.client.setd.unknown_pref",
                                                        "Unknown pref data"),
          },
 
          stat = {
-            event_code             = ProtoField.string("slim_s.client.stat.event_code", "Event code"),
-            num_crlf               = ProtoField.uint8("slim_s.client.stat.num_crlf", "Num CRLF"),
-            mas_initialized        = ProtoField.uint8("slim_s.client.stat.mas_initialized", "Mas initialized"),
-            mas_mode               = ProtoField.uint8("slim_s.client.stat.mas_mode", "Mas mode"),
-            fullness_a             = ProtoField.uint32("slim_s.client.stat.fullness_a", "Fullness A"),
-            fullness_b             = ProtoField.uint32("slim_s.client.stat.fullness_b", "Fullness B"),
-            bytes_received         = ProtoField.uint64("slim_s.client.stat.bytes_received", "Bytes received"),
-            signal_strength        = ProtoField.uint16("slim_s.client.stat.signal_strength", "Signal strength"),
-            jiffies                = ProtoField.uint32("slim_s.client.stat.jiffies", "Jiffies"),
-            output_buffer_size     = ProtoField.uint32("slim_s.client.stat.output_buffer_size",
+            event_code             = ProtoField.string("slim.client.stat.event_code", "Event code"),
+            num_crlf               = ProtoField.uint8("slim.client.stat.num_crlf", "Num CRLF"),
+            mas_initialized        = ProtoField.uint8("slim.client.stat.mas_initialized", "Mas initialized"),
+            mas_mode               = ProtoField.uint8("slim.client.stat.mas_mode", "Mas mode"),
+            fullness_a             = ProtoField.uint32("slim.client.stat.fullness_a", "Fullness A"),
+            fullness_b             = ProtoField.uint32("slim.client.stat.fullness_b", "Fullness B"),
+            bytes_received         = ProtoField.uint64("slim.client.stat.bytes_received", "Bytes received"),
+            signal_strength        = ProtoField.uint16("slim.client.stat.signal_strength", "Signal strength"),
+            jiffies                = ProtoField.uint32("slim.client.stat.jiffies", "Jiffies"),
+            output_buffer_size     = ProtoField.uint32("slim.client.stat.output_buffer_size",
                                                        "Output buffer size"),
-            output_buffer_fullness = ProtoField.uint32("slim_s.client.stat.output_buffer_fullness",
+            output_buffer_fullness = ProtoField.uint32("slim.client.stat.output_buffer_fullness",
                                                        "Output buffer fullness"),
-            elapsed_seconds        = ProtoField.uint32("slim_s.client.stat.elapsed_seconds", "Elapsed seconds"),
-            voltage                = ProtoField.uint16("slim_s.client.stat.voltage", "Voltage"),
-            elapsed_milliseconds   = ProtoField.uint32("slim_s.client.stat.elapsed_milliseconds",
+            elapsed_seconds        = ProtoField.uint32("slim.client.stat.elapsed_seconds", "Elapsed seconds"),
+            voltage                = ProtoField.uint16("slim.client.stat.voltage", "Voltage"),
+            elapsed_milliseconds   = ProtoField.uint32("slim.client.stat.elapsed_milliseconds",
                                                        "Ellapsed milliseconds"),
-            server_timestamp       = ProtoField.uint32("slim_s.client.stat.server_timestamp",
+            server_timestamp       = ProtoField.uint32("slim.client.stat.server_timestamp",
                                                        "Server timestamp"),
-            error_code             = ProtoField.uint16("slim_s.client.stat.error_code", "Error code"),
+            error_code             = ProtoField.uint16("slim.client.stat.error_code", "Error code"),
          },
          
          ureq = {},
 
          alss = {
-            packet_rev = ProtoField.uint8("slim_s.client.alss.packet_rev", "Packet revision", base.DEC),
-            time       = ProtoField.uint32("slim_s.client.alss.time", "Time", base.DEC),
-            lux        = ProtoField.uint32("slim_s.client.alss.lux", "Lux", base.DEC),
-            channel_0  = ProtoField.uint16("slim_s.client.alss.channel_0", "Channel 0", base.DEC),
-            channel_1  = ProtoField.uint16("slim_s.client.alss.channel_1", "Channel 1", base.DEC),
+            packet_rev = ProtoField.uint8("slim.client.alss.packet_rev", "Packet revision", base.DEC),
+            time       = ProtoField.uint32("slim.client.alss.time", "Time", base.DEC),
+            lux        = ProtoField.uint32("slim.client.alss.lux", "Lux", base.DEC),
+            channel_0  = ProtoField.uint16("slim.client.alss.channel_0", "Channel 0", base.DEC),
+            channel_1  = ProtoField.uint16("slim.client.alss.channel_1", "Channel 1", base.DEC),
          },
 
          shut = {},
       },
 
       server = {
-         len  = ProtoField.uint16("slim_s.server.length", "Length", base.DEC),
-         code = ProtoField.string("slim_s.server.code", "Server Code"),
-         data = ProtoField.bytes("slim_s.server.data", "Data", base.HEX),
+         len  = ProtoField.uint16("slim.server.length", "Length", base.DEC),
+         code = ProtoField.string("slim.server.code", "Server Code"),
+         data = ProtoField.bytes("slim.server.data", "Data", base.HEX),
 
          audc = {},
 
          aude = {
-            s_pdif_enable = ProtoField.uint8("slim_s.server.aude.s_pdif_enable", "s/pdif enable", base.DEC),
-            dac_enable    = ProtoField.uint8("slim_s.server.aude.dac_enable", "DAC enable", base.DEC),
+            s_pdif_enable = ProtoField.uint8("slim.server.aude.s_pdif_enable", "s/pdif enable", base.DEC),
+            dac_enable    = ProtoField.uint8("slim.server.aude.dac_enable", "DAC enable", base.DEC),
          },
 
          audf = {},
 
          audg = {
-            old_gain               = ProtoField.uint32("slim_s.server.audg.old_gain", "Old gain", base.DEC),
-            old_gain_1             = ProtoField.uint32("slim_s.server.audg.old_gain_1", "Old gain (1)", base.DEC),
-            digital_volume_control = ProtoField.uint8("slim_s.server.audg.digital_volume_control",
+            old_gain               = ProtoField.uint32("slim.server.audg.old_gain", "Old gain", base.DEC),
+            old_gain_1             = ProtoField.uint32("slim.server.audg.old_gain_1", "Old gain (1)", base.DEC),
+            digital_volume_control = ProtoField.uint8("slim.server.audg.digital_volume_control",
                                                       "Digital volume control", base.DEC),
-            preamp                 = ProtoField.uint8("slim_s.server.audg.preamp", "Preamp", base.DEC),
-            new_gain               = ProtoField.uint32("slim_s.server.audg.new_gain", "New gain", base.DEC),
-            new_gain_1             = ProtoField.uint32("slim_s.server.audg.new_gain_1", "New gain (1)", base.DEC),
-            sequence_number        = ProtoField.uint32("slim_s.server.audg.sequence_number",
+            preamp                 = ProtoField.uint8("slim.server.audg.preamp", "Preamp", base.DEC),
+            new_gain               = ProtoField.uint32("slim.server.audg.new_gain", "New gain", base.DEC),
+            new_gain_1             = ProtoField.uint32("slim.server.audg.new_gain_1", "New gain (1)", base.DEC),
+            sequence_number        = ProtoField.uint32("slim.server.audg.sequence_number",
                                                        "Sequence number", base.DEC),
          },
 
@@ -176,33 +176,33 @@ do
          rstx = {},
          rtcs = {},
          setd = {
-            id = ProtoField.uint8("slim_s.server.setd.id", "Pref Id", base.DEC),
+            id = ProtoField.uint8("slim.server.setd.id", "Pref Id", base.DEC),
          },
 
          strm = {
-            command             = ProtoField.string("slim_s.server.strm.command", "Command"),
-            autostart           = ProtoField.string("slim_s.server.strm.autostart", "Autostart"),
-            formatbyte          = ProtoField.string("slim_s.server.strm.formatbyte", "Format byte"),
-            pcmsamplesize       = ProtoField.string("slim_s.server.strm.pcmsamplesize", "PCM sample size"),
+            command             = ProtoField.string("slim.server.strm.command", "Command"),
+            autostart           = ProtoField.string("slim.server.strm.autostart", "Autostart"),
+            formatbyte          = ProtoField.string("slim.server.strm.formatbyte", "Format byte"),
+            pcmsamplesize       = ProtoField.string("slim.server.strm.pcmsamplesize", "PCM sample size"),
          
-            pcmsamplerate       = ProtoField.string("slim_s.server.strm.pcmsamplerate", "PCM sample rate"),
-            pcmchannels         = ProtoField.string("slim_s.server.strm.pcmchannels", "PCM channels"),
-            pcmendian           = ProtoField.string("slim_s.server.strm.pcmendian", "PCM endianess"),
-            buffer_threshold    = ProtoField.uint8("slim_s.server.strm.buffer_threshold", "Buffer threshold"),
+            pcmsamplerate       = ProtoField.string("slim.server.strm.pcmsamplerate", "PCM sample rate"),
+            pcmchannels         = ProtoField.string("slim.server.strm.pcmchannels", "PCM channels"),
+            pcmendian           = ProtoField.string("slim.server.strm.pcmendian", "PCM endianess"),
+            buffer_threshold    = ProtoField.uint8("slim.server.strm.buffer_threshold", "Buffer threshold"),
 
-            s_pdif_auto         = ProtoField.uint8("slim_s.server.strm.s_pdif", "s/pdif"),
-            transition_duration = ProtoField.uint8("slim_s.server.strm.transition_duration",
+            s_pdif_auto         = ProtoField.uint8("slim.server.strm.s_pdif", "s/pdif"),
+            transition_duration = ProtoField.uint8("slim.server.strm.transition_duration",
                                                    "Transition duration"),
-            transition_type     = ProtoField.string("slim_s.server.strm.transition_type", "Transition type"),
-            flags               = ProtoField.uint8("slim_s.server.strm.flags", "Flags", base.HEX),
+            transition_type     = ProtoField.string("slim.server.strm.transition_type", "Transition type"),
+            flags               = ProtoField.uint8("slim.server.strm.flags", "Flags", base.HEX),
 
-            output_threshold    = ProtoField.uint8("slim_s.server.strm.output_threshold", "Output threshold"),
-            slave_streams       = ProtoField.uint8("slim_s.server.strm.slave_streams", "Slave streams"),
-            replay_gain         = ProtoField.uint32("slim_s.server.strm.replay_gain", "Replain gain"),
-            server_port         = ProtoField.uint16("slim_s.server.strm.server_port", "Server port"),
+            output_threshold    = ProtoField.uint8("slim.server.strm.output_threshold", "Output threshold"),
+            slave_streams       = ProtoField.uint8("slim.server.strm.slave_streams", "Slave streams"),
+            replay_gain         = ProtoField.uint32("slim.server.strm.replay_gain", "Replain gain"),
+            server_port         = ProtoField.uint16("slim.server.strm.server_port", "Server port"),
 
-            server_ip           = ProtoField.ipv4("slim_s.server.strm.server_ip", "Server IP"),
-            request             = ProtoField.string("slim_s.server.strm.request", "Request"),
+            server_ip           = ProtoField.ipv4("slim.server.strm.server_ip", "Server IP"),
+            request             = ProtoField.string("slim.server.strm.request", "Request"),
          },
 
          test = {},
@@ -531,8 +531,8 @@ do
                                 end
 
    local function client_pdu_dissector(buf, pkt, root)
-      pkt.cols.protocol = p_slim_s.name
-      local t = root:add(p_slim_s, buf())
+      pkt.cols.protocol = p_slim.name
+      local t = root:add(p_slim, buf())
       local f = fields.client
       t:add(f.code,  buf(0, 4))
       t:add(f.len,  buf(4, 4))
@@ -571,8 +571,8 @@ do
    end
 
    local function server_pdu_dissector(buf, pkt, root)
-      pkt.cols.protocol = p_slim_s.name
-      local t = root:add(p_slim_s, buf())
+      pkt.cols.protocol = p_slim.name
+      local t = root:add(p_slim, buf())
       local f = fields.server
       t:add(f.len, buf(0, 2))
       t:add(f.code, buf(2, 4))
@@ -608,10 +608,10 @@ do
       end
    end
 
-   local slim_s_port = 3483
+   local slim_port = 3483
 
-   function p_slim_s.dissector(buf, pkt, t)
-      if pkt.dst_port == slim_s_port then
+   function p_slim.dissector(buf, pkt, t)
+      if pkt.dst_port == slim_port then
          return client_dissector(buf, pkt, t)
       else
          return server_dissector(buf, pkt, t)
@@ -644,11 +644,11 @@ do
 
    print_fields("root", fields)
 
-   p_slim_s.fields = flatten_fields(fields)
-   print("fields found: " .. #(p_slim_s.fields))
+   p_slim.fields = flatten_fields(fields)
+   print("fields found: " .. #(p_slim.fields))
 
    local tcp_encap_table = DissectorTable.get("tcp.port")
-   tcp_encap_table:add(slim_s_port, p_slim_s)
+   tcp_encap_table:add(slim_port, p_slim)
 
    tcp_encap_table:add(9000, tcp_encap_table:get_dissector(80))
 
