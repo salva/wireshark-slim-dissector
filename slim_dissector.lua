@@ -651,5 +651,6 @@ do
    tcp_encap_table:add(slim_port, p_slim)
 
    tcp_encap_table:add(9000, tcp_encap_table:get_dissector(80))
+   tcp_encap_table:add(9001, tcp_encap_table:get_dissector(80))
 
 end
