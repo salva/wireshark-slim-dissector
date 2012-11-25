@@ -1,46 +1,219 @@
 
 do
    local p_slim = Proto("slim", "SLIM")
-
-   local dissectors = {}
+   local p_slimp4 = Proto("slimp4", "SLIMP4")
 
    local fields = {
-      client = {
-         header = { { 'code',             'a4'     },
-                    { 'len',              'u32'    },
-                    { 'data',             'b*'     } },
-           
-         HELO   = { { 'device_id',        'u8',    h = "Device ID" },
-                    { 'revision',         'u8'     },
-                    { 'mac',              'ether', h = 'MAC address' },
-                    { 'uuid',             'b16',   h = 'UUID' },
-                    { 'wlan_channellist', 'b4',    h = 'WLAN channel list' },
-                    { 'bytes_received',   'u64'    },
-                    { 'language',         'a2'     },
-                    { 'capabilities',     'a*'     } },
+      slim = {
+         client = {
+            header   = { { 'code',             'a4'     },
+                         { 'len',              'u32'    },
+                         { 'packet_load',      'b*'     } },
+            
+            ['HELO'] = { { 'device_id',        'u8',    h = 'Device ID' },
+                         { 'revision',         'u8'     },
+                         { 'mac',              'ether', h = 'MAC address' },
+                         { 'uuid',             'b16',   h = 'UUID' },
+                         { 'wlan_channellist', 'b2',    h = 'WLAN channel list' },
+                         { 'bytes_received',   'u64'    },
+                         { 'language',         'a2'     },
+                         { 'capabilities',     'a*'     } },
          
-         PRXY   = { { 'ip',               'ipv4'   },
-                    { 'port',             'u16'    } },
+            ['PRXY'] = { { 'ip',               'ipv4'   },
+                         { 'port',             'u16'    } },
+            
+            ['ANIC'] = { { 'flags',            'u8'     } },
          
-         ANIC   = { { 'flags',            'u8'     } },
+            ['BODY'] = { { 'data',             'a*'     } },
          
-         BODY   = { { 'data',             'a*'     } },
-         
-         BUTN   = { { 'time',             'u32'    },
-                    { 'code',             'u32'    } },
-         
-      },
+            ['BUTN'] = { { 'time',             'u32'    },
+                         { 'code',             'u32'    } },
+            
+            ['BYE!'] = { { 'code',             'u8'     } },
+            
+            ['DBUG'] = { { 'data',             'a*'     } },
 
-      server = {
-         header = { { 'len',             'u16'     },
-                    { 'code',            'a4'      },
-                    { 'data',             'b*'     } },
+            ['IR  '] = { { 'time',             'u32'    },
+                         { 'format',           'u8'     },
+                         { 'no_bits',          'u8'     },
+                         { 'code',             'u32'    } },
+         
+            ['KNOB'] = { { 'time',             'u32'    },
+                         { 'position',         'u32'    },
+                         { 'sync',             'u8'     } },
 
+            ['META'] = { { 'data',             'a*'     } },
+            
+            ['RESP'] = { { 'data',             'a*'     } },
+
+            ['SETD'] = { { 'id',                      'u8' },
+                         { 'playername',              'a*' },
+                         { 'digital_output_encoding', 'u8' },
+                         { 'world_clock_output',      'u8' },
+                         { 'power_off_dac',           'u8' },
+                         { 'disable_dac',             'u8' },
+                         { 'fxloop_clock',            'u8' },
+                         { 'unknown_pref',            'b*' } },
+            
+            ['STAT'] = { { 'event_code',       'a1'     },
+                         { 'num_crlf',         'u8',    h = 'Num CRLF' },
+                         { 'mas_initialized',  'u8'     },
+                         { 'mas_mode',         'u8'     },
+                         { 'fullness_a',       'u32'    },
+                         { 'fullness_b',       'u32'    },
+                         { 'bytes_received',   'u64'    },
+                         { 'signal_strength',  'u16'    },
+                         { 'jiffies',          'u32'    },
+                         { 'output_buffer_size', 'u32'  },
+                         { 'output_buffer_fullness', 'u32' },
+                         { 'elapsed_seconds',  'u32'   },
+                         { 'voltage',          'u16'   },
+                         { 'elapsed_milliseconds', 'u32' },
+                         { 'server_timestamp', 'u32'   },
+                         { 'error_code',       'u16'   } },
+
+            ['UREQ'] = {},
+
+            ['ALSS'] = { { 'packet_rev',       'u8'    },
+                         { 'time',             'u32'   },
+                         { 'lux',              'u32'   },
+                         { 'channel_0',        'u16'   },
+                         { 'channel_1',        'u16'   } },
+            
+            ['SHUT'] = {},
+         
+         },
+
+         server = {
+            header   = { { 'len',             'u16'     },
+                         { 'code',            'a4'      },
+                         { 'packet_load',     'b*'      } },
+            
+            ['audc'] = { { 'clock_source',    'u8'      } },
+            
+            ['aude'] = { { 's_pdif_enable',   'u8'      },
+                         { 'dac_enable',      'u8'      } },
+            
+            ['audf'] = { { 'fxloop_source',   'u8'      },
+                         { 'fxloop_clock',    'u8'      } },
+            
+            ['audg'] = { { 'old_gain',        'u64'     },
+                         { 'digital_volume_control', 'u8' },
+                         { 'preamp',          'u8'      },
+                         { 'new_gain',        'u64'     },
+                         { 'sequence_number', 'u32'     } },
+            
+            ['audo'] = { { 'analog_out_mode', 'u8',     t = { [0] = 'headphone', 'sub out',
+                                                              'always on', 'always off' } } },
+            
+            ['audp'] = { { 'line_in',         'u8',      h = 'Line in/digital input'} },
+            
+            ['audr'] = { { 'rolloff_slow',    'u8'      } },
+            
+            ['bdac'] = { { 'code',            'u8',     t = { [0] = 'dacreset', 'daci2cdata', 'daci2cdataend',
+                                                              'dacdefault', 'daci2cgen', 'dacalsflood',
+                                                              'dacwooferbq', 'dacwooferbqsub',
+                                                              'daclineingain' } },
+                         { 'length',          'u8'      },
+                         { 'data',            'b*'      } },
+            
+            ['body'] = { { 'length',          'u32'     },
+                         { 'body',            'a*'      } },
+            
+            ['brir'] = { { 'bkk',             'u8'      },
+                         { 'gcp1',            'u8'      },
+                         { 'gcp2',            'u8'      },
+                         { 'bk2',             'u8'      },
+                         { 'filament_v',      'u8'      },
+                         { 'filament_p',      'u8'      },
+                         { 'annode_v',        'u8'      },
+                         { 'annode_p',        'u8'      } },
+            
+            ['cont'] = { { 'metaint',         'u32'     },
+                         { 'loop',            'u8'      },
+                         { 'count',           'u16'     },
+                         { 'guids',           'b*'      } },
+            
+            ['grfb'] = { { 'brightnesscode',  'u16'     } },
+            
+            ['grfd'] = { { 'length',          'u16'     },
+                         { 'data',            'b*'      } },
+            
+            ['grfe'] = { { 'data',            'b*'      } },
+            
+            ['i2cc'] = { { 'data',            'b*'      } },
+            
+            ['knoa'] = {},
+            
+            ['knob'] = { { 'list_index',      'u32'     },
+                         { 'list_length',     'u32'     },
+                         { 'knob_sync',       'u8'      },
+                         { 'flags',           's8'      },
+                         { 'width',           'u16'     },
+                         { 'height',          's8'      },
+                         { 'back_force',      's8'      } },
+            
+            ['ledc'] = { { 'color',           'u32'     },
+                         { 'on_time',         'u16'     },
+                         { 'off_time',        'u16'     },
+                         { 'times',           'u8'      },
+                         { 'transition',      'u8'      } },
+            
+            ['rsps'] = { { 'rate',            'u32'     } },
+            
+            ['rstx'] = { { 'data',            'b*'      } },
+            
+            ['rtcs'] = { { 'code',            'u8'      },
+                         { 'data',            'b*'      } },
+            
+            ['setd'] = { { 'id',              'u8'      } },
+            
+            ['strm'] = { { 'command',         'a1'      },
+                         { 'autostart',       'a1'      },
+                         { 'formatbyte',      'a1'      },
+                         { 'pcmsamplesize',   'a1'      },
+                         { 'pcmsamplerate',   'a1'      },
+                         { 'pcmchannels',     'a1'      },
+                         { 'pcmendian',       'a1'      },
+                         { 'buffer_threshold', 'u8'     },
+                         { 's_pdif_auto',     'u8'      },
+                         { 'transition_duration', 'u8'  },
+                         { 'transition_type', 'a1'      },
+                         { 'flags',           'u8'      },
+                         { 'output_threshold', 'u8'     },
+                         { 'slave_streams',   'u8'      },
+                         { 'replay_gain',     'u32'     },
+                         { 'server_port',     'u16'     },
+                         { 'server_ip',       'ipv4'    },
+                         { 'request',         'a*'      } },
+            
+            ['test'] = { { 'frame',           'b*'      } },
+            
+            ['upda'] = { { 'buf',             'b*'      } },
+            
+            ['updn'] = { { 'buf',             'b*'      } },
+            
+            ['ureq'] = {},
+            
+            ['vers'] = { { 'version',         'a*'      } },
+            
+            ['vfdc'] = { { 'data',            'b*'      } },
+            
+            ['visu'] = { { 'which',           'u8'      },
+                         { 'count',           'u8'      },
+                         { 'params_data',     'b*'      } },
+            
+         }
       }
+
+      slimp4 = {}
    }
 
+   local dissectors = {}
+   local path_to_field = {}
+
    local function normalize_cmd_name(cmd)
-      return cmd:match('^(%S+)%s*$'):lower()
+      return cmd:match('^(%a+)'):lower()
    end
 
    local function name_to_human(name)
@@ -51,14 +224,17 @@ do
    -- type_desc table contains the name of the factory method from
    -- ProtoField and the size of the field or nil to indicate it runs
    -- until the end of the buffer
-   local type_desc = { u8     = { 'uint8',   1 },
+   local type_desc = { s8     = { 'int8',    1 },
+                       u8     = { 'uint8',   1 },
                        u16    = { 'uint16',  2 },
                        u32    = { 'uint32',  4 },
                        u64    = { 'uint64',  8 },
                        ['a*'] = { 'string'     },
+                       a1     = { 'string',  1 },
                        a2     = { 'string',  2 },
                        a4     = { 'string',  4 },
                        ['b*'] = { 'bytes',     },
+                       b2     = { 'bytes',   2 },
                        b4     = { 'bytes',   4 },
                        b16    = { 'bytes',  16 },
                        ether  = { 'ether',   6 },
@@ -93,29 +269,33 @@ do
       end
    end
 
-   for side, msgs in pairs(fields) do
-      dissectors[side] = {}
-      local path = "slim." .. side
+   for proto, tree_proto in pairs(fields) do
 
-      for cmd, fields in pairs(msgs) do
+      for side, tree_side in pairs(tree_proto) do
+         dissectors[side] = {}
+         local path = proto .. "." .. side
 
-         local ncmd = normalize_cmd_name(cmd)
-         local path = path .. "." .. ncmd
+         for cmd, tree_cmd in pairs(tree_side) do
+            
+            local ncmd = normalize_cmd_name(cmd)
+            local path = path .. "." .. ncmd
 
-         dissectors[side][cmd] = function (buf, pkt, t)
-                                    dissect_with_fields(fields, buf, pkt, t)
-                                 end
+            dissectors[side][cmd] = function (buf, pkt, t)
+                                       dissect_with_fields(tree_cmd, buf, pkt, t)
+                                    end
 
-         for ix, desc in ipairs(fields) do
-            desc.parent = path
-            fill_desc(desc)
-            print("field " .. desc.path .. " processed")
+            for ix, desc in ipairs(tree_cmd) do
+               desc.parent = path
+               fill_desc(desc)
+               path_to_field[desc.path] = desc
+               print("field " .. desc.path .. " processed")
+            end
          end
       end
    end
 
    dissectors.client.HELO = function (buf, pkt, t)
-                               local f = fields.client.HELO
+                               local f = fields.slim.client.HELO
                                local len = buf:len()
                                local off = 0
                                for i, desc in ipairs(f) do
@@ -127,6 +307,29 @@ do
                                         t:add(desc.field, buf(off, field_len))
                                      end
                                      off = off + field_len
+                                  end
+                               end
+                            end
+
+   local pref_id_2_name = { [0] = 'playername',
+                            [1] = 'digital_output_encoding',
+                            [2] = 'world_clock_output',
+                            [3] = 'power_off_dac',
+                            [4] = 'disable_dac',
+                            [5] = 'fxloop_source',
+                            [6] = 'fxloop_clock' }
+
+   dissectors.client.SETD = function (buf, pkt, t)
+                               local len = buf:len()
+                               if len >= 1 then
+                                  t:add(fields.slim.client.SETD[1].field, buf(0, 1))
+                                  if len > 1 then
+                                     local id = buf(0, 1):uint()
+                                     local path = 'slim.client.setd.' .. (pref_id_2_name[id] or 'unknown_pref')
+                                     local f = path_to_field[path]
+                                     if not f.len or f.len + 1 < len then
+                                        t:add(f.field, buf(1, f.len))
+                                     end
                                   end
                                end
                             end
