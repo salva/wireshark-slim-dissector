@@ -204,16 +204,71 @@ do
                          { 'params_data',     'b*'      } },
             
          }
-      }
+      },
 
-      slimp4 = {}
+      slimp4 = {
+         client = {
+            header = { { 'code',          'a1'    },
+                       { 'packet_load',   'b*'    } },
+
+            ['i']  = { { 'zero',          'u8'    },
+                       { 'ir_time',       'u32'   },
+                       { 'code_set',      'b1'    },
+                       { 'bit_length',    'b1'    },
+                       { 'id_code_bytes', 'b4'    },
+                       { 'mac',           'ether' } },
+            
+            ['h']  = { { 'deviceid',      'u8'    },
+                       { 'revision',      'u8'    },
+                       { 'unknown_1',     'b9'    },
+                       { 'mac',           'ether' } },
+            
+            ['2']  = { { 'deviceid',      'u8'    },
+                       { 'revision',      'u8'    },
+                       { 'unknown_1',     'b9'    },
+                       { 'mac',           'ether' } },
+
+            ['a']  = { { 'deviceid',      'u8'    },
+                       { 'revision',      'u8'    },
+                       { 'wptr',          'u16'   },
+                       { 'rptr',          'u16'   },
+                       { 'seq',           'u16'   },
+                       { 'mac',           'ether' } },
+
+            ['d']  = { { 'unknown_1',     'b1'    },
+                       { 'device_id',     'u8'    },
+                       { 'revision',      'u8'    },
+                       { 'unknown_2',     'b8'    },
+                       { 'mac',           'ether' } },
+
+            ['e']  = { { 'tag',           'a4'    },
+                       { 'val_length',    'u8'    },
+                       { 'val',           'a*'    } },
+         },
+         
+         server = {
+            header = { { 'code',          'a1'    },
+                       { 'packet_load',   'b*'    } },
+
+            ['h']  = { { 'zeros',         'b*'    } },
+
+            ['D']  = { { 'servername',    'a*'    } },
+
+            ['E']  = { { 'tag',           'a4'    },
+                       { 'val_length',    'u8'    },
+                       { 'val',           'a*'    } },
+
+
+         },
+      },
    }
 
    local dissectors = {}
    local path_to_field = {}
 
    local function normalize_cmd_name(cmd)
-      return cmd:match('^(%a+)'):lower()
+      print ("normalizing >" .. cmd .. "<")
+      return cmd:match('^([%a%d]+)'):lower()
    end
 
    local function name_to_human(name)
@@ -234,8 +289,11 @@ do
                        a2     = { 'string',  2 },
                        a4     = { 'string',  4 },
                        ['b*'] = { 'bytes',     },
+                       b1     = { 'bytes',   1 },
                        b2     = { 'bytes',   2 },
                        b4     = { 'bytes',   4 },
+                       b8     = { 'bytes',   8 },
+                       b9     = { 'bytes',   9 },
                        b16    = { 'bytes',  16 },
                        ether  = { 'ether',   6 },
                        ipv4   = { 'ipv4',    4 } }
@@ -270,19 +328,21 @@ do
    end
 
    for proto, tree_proto in pairs(fields) do
-
+      dissectors[proto] = {}
       for side, tree_side in pairs(tree_proto) do
-         dissectors[side] = {}
+         dissectors[proto][side] = {}
          local path = proto .. "." .. side
+
+         print("path: " .. path)
 
          for cmd, tree_cmd in pairs(tree_side) do
             
             local ncmd = normalize_cmd_name(cmd)
             local path = path .. "." .. ncmd
 
-            dissectors[side][cmd] = function (buf, pkt, t)
-                                       dissect_with_fields(tree_cmd, buf, pkt, t)
-                                    end
+            dissectors[proto][side][cmd] = function (buf, pkt, t)
+                                              dissect_with_fields(tree_cmd, buf, pkt, t)
+                                           end
 
             for ix, desc in ipairs(tree_cmd) do
                desc.parent = path
@@ -294,22 +354,22 @@ do
       end
    end
 
-   dissectors.client.HELO = function (buf, pkt, t)
-                               local f = fields.slim.client.HELO
-                               local len = buf:len()
-                               local off = 0
-                               for i, desc in ipairs(f) do
-                                  local rem = len - off
-                                  local field_len = desc.len or rem
-                                  if rem <= 0 then return end
-                                  if desc.name ~= 'uuid' or len >= 36 then
-                                     if field_len <= rem then
-                                        t:add(desc.field, buf(off, field_len))
-                                     end
-                                     off = off + field_len
-                                  end
-                               end
-                            end
+   dissectors.slim.client.HELO = function (buf, pkt, t)
+                                    local f = fields.slim.client.HELO
+                                    local len = buf:len()
+                                    local off = 0
+                                    for i, desc in ipairs(f) do
+                                       local rem = len - off
+                                       local field_len = desc.len or rem
+                                       if rem <= 0 then return end
+                                       if desc.name ~= 'uuid' or len >= 36 then
+                                          if field_len <= rem then
+                                             t:add(desc.field, buf(off, field_len))
+                                          end
+                                          off = off + field_len
+                                       end
+                                    end
+                                 end
 
    local pref_id_2_name = { [0] = 'playername',
                             [1] = 'digital_output_encoding',
@@ -319,33 +379,33 @@ do
                             [5] = 'fxloop_source',
                             [6] = 'fxloop_clock' }
 
-   dissectors.client.SETD = function (buf, pkt, t)
-                               local len = buf:len()
-                               if len >= 1 then
-                                  t:add(fields.slim.client.SETD[1].field, buf(0, 1))
-                                  if len > 1 then
-                                     local id = buf(0, 1):uint()
-                                     local path = 'slim.client.setd.' .. (pref_id_2_name[id] or 'unknown_pref')
-                                     local f = path_to_field[path]
-                                     if not f.len or f.len + 1 < len then
-                                        t:add(f.field, buf(1, f.len))
-                                     end
-                                  end
-                               end
-                            end
-
-   local function client_pdu_dissector(buf, pkt, root)
+   dissectors.slim.client.SETD = function (buf, pkt, t)
+                                    local len = buf:len()
+                                    if len >= 1 then
+                                       t:add(fields.slim.client.SETD[1].field, buf(0, 1))
+                                       if len > 1 then
+                                          local id = buf(0, 1):uint()
+                                          local path = 'slim.client.setd.' .. (pref_id_2_name[id] or 'unknown_pref')
+                                          local f = path_to_field[path]
+                                          if not f.len or f.len + 1 < len then
+                                             t:add(f.field, buf(1, f.len))
+                                          end
+                                       end
+                                    end
+                                 end
+   
+   local function slim_client_pdu_dissector(buf, pkt, root)
       pkt.cols.protocol = p_slim.name
       local t = root:add(p_slim, buf())
-      local h = dissectors.client.header(buf, pkt, t)
+      dissectors.slim.client.header(buf, pkt, t)
       local code = buf(0, 4):string()
-      local d = dissectors.client[code]
+      local d = dissectors.slim.client[code]
       if d then
          d(buf(8), pkt, t)
       end
    end
 
-   function client_dissector(buf, pkt, root)
+   function slim_client_dissector(buf, pkt, root)
       local offset = 0
       while true do
          local buf_len = buf:len() - offset
@@ -364,23 +424,23 @@ do
             return
          end
          
-         client_pdu_dissector(buf(offset, pdu_len), pkt, root)
+         slim_client_pdu_dissector(buf(offset, pdu_len), pkt, root)
          offset = offset + pdu_len
       end
    end
 
-   local function server_pdu_dissector(buf, pkt, root)
+   local function slim_server_pdu_dissector(buf, pkt, root)
       pkt.cols.protocol = p_slim.name
       local t = root:add(p_slim, buf())
-      dissectors.server.header(buf, pkt, t)
+      dissectors.slim.server.header(buf, pkt, t)
       local code = buf(2, 4):string()
-      local d = dissectors.server[code]
+      local d = dissectors.slim.server[code]
       if d then
          d(buf(6), pkt, t)
       end
    end
 
-   local function server_dissector(buf, pkt, root)
+   local function slim_server_dissector(buf, pkt, root)
       local offset = 0
       while true do
          local buf_len = buf:len() - offset
@@ -398,18 +458,55 @@ do
             return
          end
             
-         server_pdu_dissector(buf(offset, pdu_len), pkt, root)
+         slim_server_pdu_dissector(buf(offset, pdu_len), pkt, root)
          offset = offset + pdu_len
       end
    end
 
    local slim_port = 3483
 
+   for _, p in ipairs( { {'server', 'E'},
+                         {'client', 'e'} } ) do
+      local dir  = p[1]
+      local code = p[2]
+      local f = fields.slimp4[dir][code]
+      dissectors.slimp4[dir][code] = function (buf, pkt, t)
+                                        local len = buf:len()
+                                        local off = 0
+                                        while len >= off + 5 do
+                                           t:add(f[1].field, buf(off, 4))
+                                           t:add(f[2].field, buf(off + 4, 1))
+                                           local val_len = buf(off + 4, 1):uint()
+                                           if val_len > 0 then
+                                              t:add(f[3].field, buf(off + 5, val_len))
+                                           end
+                                           off = off + 5 + val_len
+                                        end
+                                     end
+   end
+      
    function p_slim.dissector(buf, pkt, t)
       if pkt.dst_port == slim_port then
-         return client_dissector(buf, pkt, t)
+         return slim_client_dissector(buf, pkt, t)
       else
-         return server_dissector(buf, pkt, t)
+         return slim_server_dissector(buf, pkt, t)
+      end
+   end
+
+   function p_slimp4.dissector(buf, pkt, root)
+      pkt.cols.protocol = "SLIMP4"
+      t = root:add(p_slim, buf())
+      local dir
+      if pkt.dst_port == slim_port then
+         dir = 'client'
+      else
+         dir = 'server'
+      end
+      dissectors.slimp4[dir].header(buf, pkt, t)
+      code = buf(0, 1):string()
+      local d = dissectors.slimp4[dir][code]
+      if d then
+         d(buf(1), pkt, t)
       end
    end
 
@@ -418,5 +515,8 @@ do
 
    tcp_encap_table:add(9000, tcp_encap_table:get_dissector(80))
    tcp_encap_table:add(9001, tcp_encap_table:get_dissector(80))
+
+   local udp_encap_table = DissectorTable.get("udp.port")
+   udp_encap_table:add(slim_port, p_slimp4)
 
 end
